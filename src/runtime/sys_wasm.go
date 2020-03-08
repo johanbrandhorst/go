@@ -21,9 +21,6 @@ func wasmDiv()
 func wasmTruncS()
 func wasmTruncU()
 
-//go:wasmimport go runtime.wasmExit
-func wasmExit(code int32)
-
 // adjust Gobuf as it if executed a call to fn with context ctxt
 // and then stopped before the first instruction in fn.
 func gostartcall(buf *gobuf, fn, ctxt unsafe.Pointer) {
