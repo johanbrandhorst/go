@@ -1003,11 +1003,17 @@ func (w *writer) funcExt(obj *types2.Func) {
 	if pragma&ir.Systemstack != 0 && pragma&ir.Nosplit != 0 {
 		w.p.errorf(decl, "go:nosplit and go:systemstack cannot be combined")
 	}
+	//wi := asWasmImport(decl.Pragma)
 
 	if decl.Body != nil {
 		if pragma&ir.Noescape != 0 {
 			w.p.errorf(decl, "can only use //go:noescape with external func implementations")
 		}
+		/*
+			if wi != nil {
+				w.p.errorf(decl, "can only use //go:wasmimport with external func implementations")
+			}
+		*/
 		if (pragma&ir.UintptrKeepAlive != 0 && pragma&ir.UintptrEscapes == 0) && pragma&ir.Nosplit == 0 {
 			// Stack growth can't handle uintptr arguments that may
 			// be pointers (as we don't know which are pointers
@@ -1028,7 +1034,8 @@ func (w *writer) funcExt(obj *types2.Func) {
 		if base.Flag.Complete || decl.Name.Value == "init" {
 			// Linknamed functions are allowed to have no body. Hopefully
 			// the linkname target has a body. See issue 23311.
-			if _, ok := w.p.linknames[obj]; !ok {
+			// Wasmimport functions are also allowed to have no body.
+			if _, ok := w.p.linknames[obj]; !ok /*&& wi == nil*/ {
 				w.p.errorf(decl, "missing function body")
 			}
 		}
@@ -2727,6 +2734,15 @@ func asPragmaFlag(p syntax.Pragma) ir.PragmaFlag {
 	}
 	return p.(*pragmas).Flag
 }
+
+/*
+func asWasmImport(p syntax.Pragma) *WasmImport {
+	if p == nil {
+		return nil
+	}
+	return p.(*pragmas).WasmImport
+}
+*/
 
 // isPtrTo reports whether from is the type *to.
 func isPtrTo(from, to types2.Type) bool {

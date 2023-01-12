@@ -102,6 +102,7 @@ TEXT runtime·growMemory(SB), NOSPLIT, $0
 	I32Store ret+8(FP)
 	RET
 
+// Remove all below
 TEXT ·resetMemoryDataView(SB), NOSPLIT, $0
 	CallImport
 	RET
