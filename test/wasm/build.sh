@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -ex
 
+# Depends on toolstash!
+# > go install golang.org/x/tools/cmd/toolstash@latest
+# > src; ./make.bash
+# > toolstash save
+
 GO=$PWD/../../bin/go
 TEST_WASM=$PWD/test.wasm
 
