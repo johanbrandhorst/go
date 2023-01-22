@@ -243,20 +243,7 @@
 						const fd = getInt64(sp + 8);
 						const p = getInt64(sp + 16);
 						const n = this.mem.getInt32(sp + 24, true);
-						throw "no";
-						fs.writeSync(fd, "TWO: ");
 						fs.writeSync(fd, new Uint8Array(this._inst.exports.mem.buffer, p, n));
-					},
-
-					// func wasmWrite(fd uintptr, p unsafe.Pointer, n int32)
-					"runtime.wasmWrite2": (sp) => {
-						sp >>>= 0;
-						const fd = getInt64(sp + 8);
-						const p = getInt64(sp + 16);
-						const n = this.mem.getInt32(sp + 24, true);
-						throw "no 2";
-						fs.writeSync(fd, "TWO: ");
-						// fs.writeSync(fd, new Uint8Array(this._inst.exports.mem.buffer, p, n));
 					},
 
 					// func resetMemoryDataView()
