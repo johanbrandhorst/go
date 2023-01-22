@@ -17,7 +17,7 @@ func write1(fd uintptr, p unsafe.Pointer, n int32) int32 {
 	if fd > 2 {
 		throw("runtime.write to fd > 2 is unsupported")
 	}
-	wasmWrite2(fd, p, n)
+	wasmWrite(fd, p, n)
 	return n
 }
 
@@ -26,14 +26,9 @@ func open(name *byte, mode, perm int32) int32        { panic("not implemented") 
 func closefd(fd int32) int32                         { panic("not implemented") }
 func read(fd int32, p unsafe.Pointer, n int32) int32 { panic("not implemented") }
 
-// //go:wasmimport go runtime.wasmWrite
-//
+//go:wasmimport go runtime.wasmWrite
 //go:noescape
 func wasmWrite(fd uintptr, p unsafe.Pointer, n int32)
-
-//go:noescape
-//go:wasmimport go runtime.wasmWrite2
-func wasmWrite2(fd uintptr, p unsafe.Pointer, n int32)
 
 func usleep(usec uint32)
 
@@ -123,7 +118,7 @@ func crash() {
 	*(*int32)(nil) = 0
 }
 
-// //go:wasmimport go runtime.getRandomData
+//go:wasmimport go runtime.getRandomData
 func getRandomData(r []byte)
 
 func goenvs() {
