@@ -100,8 +100,6 @@ var unaryDst = map[obj.As]bool{
 	ATee:          true,
 	ACall:         true,
 	ACallIndirect: true,
-	// Remove below
-	ACallImport:   true,
 	ABr:           true,
 	ABrIf:         true,
 	ABrTable:      true,
@@ -134,8 +132,7 @@ var (
 
 const (
 	/* mark flags */
-	CallWasmImport = 1 << 0
-	WasmImport     = 1 << 0
+	WasmImport = 1 << 0
 )
 
 func instinit(ctxt *obj.Link) {
@@ -782,12 +779,6 @@ func preprocess(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 			default:
 				panic("bad MOV type")
 			}
-		// Remove below
-		case ACallImport:
-			p.As = obj.ANOP
-			p = appendp(p, AGet, regAddr(REG_SP))
-			p = appendp(p, ACall, obj.Addr{Type: obj.TYPE_MEM, Name: obj.NAME_EXTERN, Sym: s})
-			p.Mark = WasmImport
 		}
 	}
 
