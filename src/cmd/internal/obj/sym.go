@@ -416,37 +416,37 @@ func (ctxt *Link) traverseFuncAux(flag traverseFlag, fsym *LSym, fn func(parent 
 		}
 	}
 
+	auxsyms := []*LSym{fninfo.dwarfRangesSym, fninfo.dwarfLocSym, fninfo.dwarfDebugLinesSym, fninfo.dwarfInfoSym, fninfo.WasmImportSym}
+	for _, s := range auxsyms {
+		if s == nil || s.Size == 0 {
+			continue
+		}
+		fn(fsym, s)
+		if flag&traverseRefs != 0 {
+			for _, r := range s.R {
+				if r.Sym != nil {
+					fn(s, r.Sym)
+				}
+			}
+		}
+	}
+
 	/*
-		auxsyms := []*LSym{fninfo.dwarfRangesSym, fninfo.dwarfLocSym, fninfo.dwarfDebugLinesSym, fninfo.dwarfInfoSym, fninfo.WasmImportSym}
-		for _, s := range auxsyms {
-			if s == nil || s.Size == 0 {
+		dwsyms := []*LSym{fninfo.dwarfRangesSym, fninfo.dwarfLocSym, fninfo.dwarfDebugLinesSym, fninfo.dwarfInfoSym}
+		for _, dws := range dwsyms {
+			if dws == nil || dws.Size == 0 {
 				continue
 			}
-			fn(fsym, s)
+			fn(fsym, dws)
 			if flag&traverseRefs != 0 {
-				for _, r := range s.R {
+				for _, r := range dws.R {
 					if r.Sym != nil {
-						fn(s, r.Sym)
+						fn(dws, r.Sym)
 					}
 				}
 			}
 		}
 	*/
-
-	dwsyms := []*LSym{fninfo.dwarfRangesSym, fninfo.dwarfLocSym, fninfo.dwarfDebugLinesSym, fninfo.dwarfInfoSym}
-	for _, dws := range dwsyms {
-		if dws == nil || dws.Size == 0 {
-			continue
-		}
-		fn(fsym, dws)
-		if flag&traverseRefs != 0 {
-			for _, r := range dws.R {
-				if r.Sym != nil {
-					fn(dws, r.Sym)
-				}
-			}
-		}
-	}
 }
 
 // Traverse aux symbols, calling fn for each sym/aux pair.

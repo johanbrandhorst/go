@@ -6,13 +6,13 @@ package wasm
 
 import (
 	"bytes"
-	//"cmd/internal/obj"
+	"cmd/internal/obj"
 	"cmd/internal/objabi"
 	"cmd/link/internal/ld"
 	"cmd/link/internal/loader"
 	"cmd/link/internal/sym"
-	//"encoding/binary"
-	//"fmt"
+	"encoding/binary"
+	"fmt"
 	"internal/buildcfg"
 	"io"
 	"regexp"
@@ -47,10 +47,10 @@ func gentext(ctxt *ld.Link, ldr *loader.Loader) {
 }
 
 type wasmFunc struct {
-	//Module string
-	Name string
-	Type uint32
-	Code []byte
+	Module string
+	Name   string
+	Type   uint32
+	Code   []byte
 }
 
 type wasmFuncType struct {
@@ -58,48 +58,47 @@ type wasmFuncType struct {
 	Results []byte
 }
 
-/*
-	func readWasmImport(ldr *loader.Loader, s loader.Sym) obj.WasmImport {
-		reportError := func(err error) { panic(fmt.Sprintf("failed to read WASM import in sym %v: %v", s, err)) }
+func readWasmImport(ldr *loader.Loader, s loader.Sym) obj.WasmImport {
+	reportError := func(err error) { panic(fmt.Sprintf("failed to read WASM import in sym %v: %v", s, err)) }
 
-		r := bytes.NewReader(ldr.Data(s))
-		readBinary := func(v interface{}) {
-			if err := binary.Read(r, binary.LittleEndian, v); err != nil {
-				reportError(err)
-			}
+	r := bytes.NewReader(ldr.Data(s))
+	readBinary := func(v interface{}) {
+		if err := binary.Read(r, binary.LittleEndian, v); err != nil {
+			reportError(err)
 		}
-		readUint32 := func() (v uint32) { readBinary(&v); return }
-		readInt64 := func() (v int64) { readBinary(&v); return }
-		readByte := func() byte {
-			b, err := r.ReadByte()
-			if err != nil {
-				reportError(err)
-			}
-			return b
-		}
-		readString := func() string {
-			buf := make([]byte, readUint32())
-			if _, err := io.ReadFull(r, buf); err != nil {
-				reportError(err)
-			}
-			return string(buf)
-		}
-		wi := obj.WasmImport{}
-		wi.Module = readString()
-		wi.Name = readString()
-		wi.Params = make([]obj.WasmField, readUint32())
-		for i := range wi.Params {
-			wi.Params[i].Type = obj.WasmFieldType(readByte())
-			wi.Params[i].Offset = readInt64()
-		}
-		wi.Results = make([]obj.WasmField, readUint32())
-		for i := range wi.Results {
-			wi.Results[i].Type = obj.WasmFieldType(readByte())
-			wi.Results[i].Offset = readInt64()
-		}
-		return wi
 	}
-*/
+	readUint32 := func() (v uint32) { readBinary(&v); return }
+	readInt64 := func() (v int64) { readBinary(&v); return }
+	readByte := func() byte {
+		b, err := r.ReadByte()
+		if err != nil {
+			reportError(err)
+		}
+		return b
+	}
+	readString := func() string {
+		buf := make([]byte, readUint32())
+		if _, err := io.ReadFull(r, buf); err != nil {
+			reportError(err)
+		}
+		return string(buf)
+	}
+	wi := obj.WasmImport{}
+	wi.Module = readString()
+	wi.Name = readString()
+	wi.Params = make([]obj.WasmField, readUint32())
+	for i := range wi.Params {
+		wi.Params[i].Type = obj.WasmFieldType(readByte())
+		wi.Params[i].Offset = readInt64()
+	}
+	wi.Results = make([]obj.WasmField, readUint32())
+	for i := range wi.Results {
+		wi.Results[i].Type = obj.WasmFieldType(readByte())
+		wi.Results[i].Offset = readInt64()
+	}
+	return wi
+}
+
 var wasmFuncTypes = map[string]*wasmFuncType{
 	"_rt0_wasm_js":           {Params: []byte{}},                                         //
 	"wasm_export_run":        {Params: []byte{I32, I32}},                                 // argc, argv
@@ -190,8 +189,8 @@ func asmb2(ctxt *ld.Link, ldr *loader.Loader) {
 		for ri := 0; ri < relocs.Count(); ri++ {
 			r := relocs.At(ri)
 			if r.Type() == objabi.R_WASMIMPORT {
-				/*
-					wi := readWasmImport(ldr, ldr.WasmImportSym(fn))
+				if lsym, ok := ldr.WasmImportSym(fn); ok {
+					wi := readWasmImport(ldr, lsym)
 					hostImportMap[fn] = int64(len(hostImports))
 					hostImports = append(hostImports, &wasmFunc{
 						Module: wi.Module,
@@ -201,13 +200,14 @@ func asmb2(ctxt *ld.Link, ldr *loader.Loader) {
 							Results: fieldsToTypes(wi.Results),
 						}, &types),
 					})
-				*/
-
-				hostImportMap[r.Sym()] = int64(len(hostImports))
-				hostImports = append(hostImports, &wasmFunc{
-					Name: ldr.SymName(r.Sym()),
-					Type: lookupType(&wasmFuncType{Params: []byte{I32}}, &types),
-				})
+				} else {
+					// This handles legacy, CallImport style relocations
+					hostImportMap[r.Sym()] = int64(len(hostImports))
+					hostImports = append(hostImports, &wasmFunc{
+						Name: ldr.SymName(r.Sym()),
+						Type: lookupType(&wasmFuncType{Params: []byte{I32}}, &types),
+					})
+				}
 			}
 		}
 	}
@@ -343,8 +343,11 @@ func writeImportSec(ctxt *ld.Link, hostImports []*wasmFunc) {
 
 	writeUleb128(ctxt.Out, uint64(len(hostImports))) // number of imports
 	for _, fn := range hostImports {
-		// writeName(ctxt.Out, fn.Module)
-		writeName(ctxt.Out, "go") // provided by the import object in wasm_exec.js
+		if fn.Module != "" {
+			writeName(ctxt.Out, fn.Module)
+		} else {
+			writeName(ctxt.Out, "go") // provided by the import object in wasm_exec.js
+		}
 		// Remove above
 		writeName(ctxt.Out, fn.Name)
 		ctxt.Out.WriteByte(0x00) // func import
@@ -668,7 +671,6 @@ func writeSleb128(w io.ByteWriter, v int64) {
 	}
 }
 
-/*
 func fieldsToTypes(fields []obj.WasmField) []byte {
 	b := make([]byte, len(fields))
 	for i, f := range fields {
@@ -685,4 +687,3 @@ func fieldsToTypes(fields []obj.WasmField) []byte {
 	}
 	return b
 }
-*/

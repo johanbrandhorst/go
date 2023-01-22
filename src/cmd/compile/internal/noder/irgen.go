@@ -368,7 +368,7 @@ Outer:
 	if base.Flag.Complete {
 		for _, n := range g.target.Decls {
 			if fn, ok := n.(*ir.Func); ok {
-				if fn.Body == nil && fn.Nname.Sym().Linkname == "" /*&& fn.WasmImport == nil*/ {
+				if fn.Body == nil && fn.Nname.Sym().Linkname == "" && fn.WasmImport == nil {
 					base.ErrorfAt(fn.Pos(), "missing function body")
 				}
 			}

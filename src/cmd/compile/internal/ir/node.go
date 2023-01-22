@@ -462,13 +462,11 @@ const (
 
 )
 
-/*
 // WasmImport stores metadata associated with the //go:wasmimport pragma
 type WasmImport struct {
 	Module string
 	Name   string
 }
-*/
 
 func AsNode(n types.Object) Node {
 	if n == nil {

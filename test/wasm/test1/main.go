@@ -1,11 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"syscall/js"
+)
 
 func main() {
-	fmt.Println("Hello world")
-	v := run()
+	v := js.ProbeWASM()
 	fmt.Println(v)
+	// fmt.Println("Hello world")
+	// v := run()
+	// fmt.Println(v)
 }
 
 func run() int {

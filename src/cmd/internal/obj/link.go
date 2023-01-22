@@ -37,7 +37,7 @@ import (
 	"cmd/internal/objabi"
 	"cmd/internal/src"
 	"cmd/internal/sys"
-	//"encoding/binary"
+	"encoding/binary"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -500,11 +500,9 @@ type FuncInfo struct {
 	WrapInfo           *LSym // for wrapper, info of wrapped function
 	JumpTables         []JumpTable
 
-	FuncInfoSym *LSym
-	/*
-		WasmImportSym *LSym
-		WasmImport    *WasmImport
-	*/
+	FuncInfoSym   *LSym
+	WasmImportSym *LSym
+	WasmImport    *WasmImport
 }
 
 // JumpTable represents a table used for implementing multi-way
@@ -563,7 +561,6 @@ func (s *LSym) File() *FileInfo {
 	return f
 }
 
-/*
 // WasmImport represents a WebAssembly (WASM) imported function with
 // parameters and results translated into WASM types based on the Go function
 // declaration.
@@ -632,7 +629,6 @@ const (
 	WasmF64
 	WasmPtr
 )
-*/
 
 type InlMark struct {
 	// When unwinding from an instruction in an inlined body, mark

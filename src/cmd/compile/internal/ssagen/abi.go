@@ -11,10 +11,10 @@ import (
 	"os"
 	"strings"
 
-	//"cmd/compile/internal/abi"
+	"cmd/compile/internal/abi"
 	"cmd/compile/internal/base"
 	"cmd/compile/internal/ir"
-	//"cmd/compile/internal/objw"
+	"cmd/compile/internal/objw"
 	"cmd/compile/internal/typecheck"
 	"cmd/compile/internal/types"
 	"cmd/internal/obj"
@@ -342,7 +342,6 @@ func makeABIWrapper(f *ir.Func, wrapperABI obj.ABI) {
 	ir.CurFunc = savedcurfn
 }
 
-/*
 // CreateWasmImportWrapper creates a wrapper for imported WASM functions to
 // adapt them to the Go calling convention. The body for this function is
 // generated in cmd/internal/obj/wasm/wasmobj.go
@@ -350,6 +349,7 @@ func CreateWasmImportWrapper(fn *ir.Func) bool {
 	if fn.WasmImport == nil {
 		return false
 	}
+	fmt.Printf("create wasm import: %s\n", fn.WasmImport)
 	if buildcfg.GOARCH != "wasm" {
 		base.FatalfAt(fn.Pos(), "CreateWasmImportWrapper call not supported on %s: func was %v", buildcfg.GOARCH, fn)
 	}
@@ -468,4 +468,3 @@ func setupTextLSym(f *ir.Func, flag int) {
 		f.LSym.Func().WasmImport = &wi
 	}
 }
-*/
