@@ -349,7 +349,6 @@ func CreateWasmImportWrapper(fn *ir.Func) bool {
 	if fn.WasmImport == nil {
 		return false
 	}
-	fmt.Printf("create wasm import: %s\n", fn.WasmImport)
 	if buildcfg.GOARCH != "wasm" {
 		base.FatalfAt(fn.Pos(), "CreateWasmImportWrapper call not supported on %s: func was %v", buildcfg.GOARCH, fn)
 	}

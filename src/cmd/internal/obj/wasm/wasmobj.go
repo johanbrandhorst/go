@@ -192,7 +192,6 @@ func preprocess(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 			Name: obj.NAME_EXTERN,
 			Sym:  s,
 		}
-		fmt.Printf("to: %s (%s)\n", s, wi.Name)
 		if wi.Module == "go" {
 			p = appendp(p, AGet, regAddr(REG_SP))
 			p = appendp(p, ACall, to)

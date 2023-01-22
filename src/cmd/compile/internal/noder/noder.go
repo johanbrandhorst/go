@@ -298,8 +298,6 @@ func (p *noder) pragma(pos syntax.Pos, blankLine bool, text string, old syntax.P
 				Module: f[1],
 				Name:   f[2],
 			}
-
-			fmt.Printf("pragma: %p %+v\n", pragma, pragma.WasmImport)
 		}
 	case strings.HasPrefix(text, "go:linkname "):
 		f := strings.Fields(text)
