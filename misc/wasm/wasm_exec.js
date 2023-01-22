@@ -219,7 +219,7 @@
 					// function. A goroutine can switch to a new stack if the current stack is too small (see morestack function).
 					// This changes the SP, thus we have to update the SP used by the imported function.
 
-					"debug.probeWasm": (sp) => {
+					"syscall/js.probeWasm": (sp) => {
 						sp >>>= 0;
 
 						setInt32(sp + 8, 0xfeed);
