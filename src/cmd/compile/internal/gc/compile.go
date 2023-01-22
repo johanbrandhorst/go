@@ -42,11 +42,9 @@ func enqueueFunc(fn *ir.Func) {
 		return // we'll get this as part of its enclosing function
 	}
 
-	/*
-		if ssagen.CreateWasmImportWrapper(fn) {
-			return
-		}
-	*/
+	if ssagen.CreateWasmImportWrapper(fn) {
+		return
+	}
 
 	if len(fn.Body) == 0 {
 		// Initialize ABI wrappers if necessary.

@@ -17,7 +17,7 @@ func write1(fd uintptr, p unsafe.Pointer, n int32) int32 {
 	if fd > 2 {
 		throw("runtime.write to fd > 2 is unsupported")
 	}
-	wasmWrite(fd, p, n)
+	wasmWrite2(fd, p, n)
 	return n
 }
 
@@ -30,6 +30,10 @@ func read(fd int32, p unsafe.Pointer, n int32) int32 { panic("not implemented") 
 //
 //go:noescape
 func wasmWrite(fd uintptr, p unsafe.Pointer, n int32)
+
+//go:noescape
+//go:wasmimport go runtime.wasmWrite2
+func wasmWrite2(fd uintptr, p unsafe.Pointer, n int32)
 
 func usleep(usec uint32)
 

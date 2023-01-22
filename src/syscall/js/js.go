@@ -399,7 +399,7 @@ func (v Value) Call(m string, args ...any) Value {
 	return makeValue(res)
 }
 
-// //go:wasmimport go syscall/js.valueCall
+// go:wasmimport go syscall/js.valueCall
 func valueCall(v ref, m string, args []ref) (ref, bool)
 
 // Invoke does a JavaScript call of the value v with the given arguments.

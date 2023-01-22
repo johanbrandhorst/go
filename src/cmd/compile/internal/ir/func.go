@@ -134,11 +134,9 @@ type Func struct {
 	// Currently only used for go/defer wrappers.
 	WrappedFunc *Func
 
-	/*
-		// WasmImport is used by the //go:wasmimport directive to store info about
-		// a WebAssembly function import.
-		WasmImport *WasmImport
-	*/
+	// WasmImport is used by the //go:wasmimport directive to store info about
+	// a WebAssembly function import.
+	WasmImport *WasmImport
 }
 
 func NewFunc(pos src.XPos) *Func {
