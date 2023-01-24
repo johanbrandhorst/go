@@ -27,43 +27,43 @@ type __wasi_ciovec_t struct {
 	buf_len size_t
 }
 
-//go:wasmimport __wasi_args_get wasi_unstable args_get
+//go:wasmimport wasi_snapshot_preview1 args_get
 func __wasi_args_get(
 	argv *uintptr_t,
 	argv_buf *byte,
 ) __wasi_errno_t
 
-//go:wasmimport __wasi_args_sizes_get wasi_unstable args_sizes_get
+//go:wasmimport wasi_snapshot_preview1 args_sizes_get
 func __wasi_args_sizes_get(
 	argc *size_t,
 	argv_buf_size *size_t,
 ) __wasi_errno_t
 
-//go:wasmimport __wasi_clock_time_get wasi_unstable clock_time_get
+//go:wasmimport wasi_snapshot_preview1 clock_time_get
 func __wasi_clock_time_get(
 	clock_id __wasi_clockid_t,
 	precision __wasi_timestamp_t,
 	time *__wasi_timestamp_t,
 ) __wasi_errno_t
 
-//go:wasmimport __wasi_environ_get wasi_unstable environ_get
+//go:wasmimport wasi_snapshot_preview1 environ_get
 func __wasi_environ_get(
 	environ *uintptr_t,
 	environ_buf *byte,
 ) __wasi_errno_t
 
-//go:wasmimport __wasi_environ_sizes_get wasi_unstable environ_sizes_get
+//go:wasmimport wasi_snapshot_preview1 environ_sizes_get
 func __wasi_environ_sizes_get(
 	environ_count *size_t,
 	environ_buf_size *size_t,
 ) __wasi_errno_t
 
-//go:wasmimport __wasi_proc_exit wasi_unstable proc_exit
+//go:wasmimport wasi_snapshot_preview1 proc_exit
 func __wasi_proc_exit(
 	code int32,
 )
 
-//go:wasmimport __wasi_fd_write wasi_unstable fd_write
+//go:wasmimport wasi_snapshot_preview1 fd_write
 func __wasi_fd_write(
 	fd __wasi_fd_t,
 	iovs *__wasi_ciovec_t,
@@ -71,10 +71,10 @@ func __wasi_fd_write(
 	nwritten *size_t,
 ) __wasi_errno_t
 
-//go:wasmimport __wasi_sched_yield wasi_unstable sched_yield
+//go:wasmimport wasi_snapshot_preview1 sched_yield
 func __wasi_sched_yield() __wasi_errno_t
 
-//go:wasmimport __wasi_random_get wasi_unstable random_get
+//go:wasmimport wasi_snapshot_preview1 random_get
 func __wasi_random_get(
 	buf *byte,
 	buf_len size_t,

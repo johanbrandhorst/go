@@ -116,18 +116,18 @@ const (
 	FILESTAT_SET_MTIM_NOW Fstflags_t = 0x0008
 )
 
-//go:wasmimport Fd_close wasi_unstable fd_close
+//go:wasmimport wasi_snapshot_preview1 fd_close
 func Fd_close(
 	fd Fd_t,
 ) Errno
 
-//go:wasmimport Fd_filestat_set_size wasi_unstable fd_filestat_set_size
+//go:wasmimport wasi_snapshot_preview1 fd_filestat_set_size
 func Fd_filestat_set_size(
 	fd Fd_t,
 	st_size Filesize_t,
 ) Errno
 
-//go:wasmimport Fd_pread wasi_unstable fd_pread
+//go:wasmimport wasi_snapshot_preview1 fd_pread
 func Fd_pread(
 	fd Fd_t,
 	iovs *Ciovec_t,
@@ -136,7 +136,7 @@ func Fd_pread(
 	nread *size_t,
 ) Errno
 
-//go:wasmimport Fd_pwrite wasi_unstable fd_pwrite
+//go:wasmimport wasi_snapshot_preview1 fd_pwrite
 func Fd_pwrite(
 	fd Fd_t,
 	iovs *Ciovec_t,
@@ -145,7 +145,7 @@ func Fd_pwrite(
 	nwritten *size_t,
 ) Errno
 
-//go:wasmimport Fd_read wasi_unstable fd_read
+//go:wasmimport wasi_snapshot_preview1 fd_read
 func Fd_read(
 	fd Fd_t,
 	iovs *Ciovec_t,
@@ -153,7 +153,7 @@ func Fd_read(
 	nread *size_t,
 ) Errno
 
-//go:wasmimport Fd_readdir wasi_unstable fd_readdir
+//go:wasmimport wasi_snapshot_preview1 fd_readdir
 func Fd_readdir(
 	fd Fd_t,
 	buf *byte,
@@ -162,7 +162,7 @@ func Fd_readdir(
 	bufused *size_t,
 ) Errno
 
-//go:wasmimport Fd_seek wasi_unstable fd_seek
+//go:wasmimport wasi_snapshot_preview1 fd_seek
 func Fd_seek(
 	fd Fd_t,
 	offset Filedelta_t,
@@ -170,19 +170,19 @@ func Fd_seek(
 	newoffset *Filesize_t,
 ) Errno
 
-//go:wasmimport Fd_fdstat_get wasi_unstable fd_fdstat_get
+//go:wasmimport wasi_snapshot_preview1 fd_fdstat_get
 func Fd_fdstat_get(
 	fd Fd_t,
 	buf *Fdstat_t,
 ) Errno
 
-//go:wasmimport Fd_filestat_get wasi_unstable fd_filestat_get
+//go:wasmimport wasi_snapshot_preview1 fd_filestat_get
 func Fd_filestat_get(
 	fd Fd_t,
 	buf *Stat_t,
 ) Errno
 
-//go:wasmimport Fd_write wasi_unstable fd_write
+//go:wasmimport wasi_snapshot_preview1 fd_write
 func Fd_write(
 	fd Fd_t,
 	iovs *Ciovec_t,
@@ -190,14 +190,14 @@ func Fd_write(
 	nwritten *size_t,
 ) Errno
 
-//go:wasmimport Path_create_directory wasi_unstable path_create_directory
+//go:wasmimport wasi_snapshot_preview1 path_create_directory
 func Path_create_directory(
 	fd Fd_t,
 	path *byte,
 	path_len size_t,
 ) Errno
 
-//go:wasmimport Path_filestat_get wasi_unstable path_filestat_get
+//go:wasmimport wasi_snapshot_preview1 path_filestat_get
 func Path_filestat_get(
 	fd Fd_t,
 	flags Lookupflags_t,
@@ -206,7 +206,7 @@ func Path_filestat_get(
 	buf *Stat_t,
 ) Errno
 
-//go:wasmimport Path_filestat_set_times wasi_unstable path_filestat_set_times
+//go:wasmimport wasi_snapshot_preview1 path_filestat_set_times
 func Path_filestat_set_times(
 	fd Fd_t,
 	flags Lookupflags_t,
@@ -217,7 +217,7 @@ func Path_filestat_set_times(
 	fstflags Fstflags_t,
 ) Errno
 
-//go:wasmimport Path_link wasi_unstable path_link
+//go:wasmimport wasi_snapshot_preview1 path_link
 func Path_link(
 	old_fd Fd_t,
 	old_flags Lookupflags_t,
@@ -228,7 +228,7 @@ func Path_link(
 	new_path_len size_t,
 ) Errno
 
-//go:wasmimport Path_readlink wasi_unstable path_readlink
+//go:wasmimport wasi_snapshot_preview1 path_readlink
 func Path_readlink(
 	fd Fd_t,
 	path *byte,
@@ -238,14 +238,14 @@ func Path_readlink(
 	bufused *size_t,
 ) Errno
 
-//go:wasmimport Path_remove_directory wasi_unstable path_remove_directory
+//go:wasmimport wasi_snapshot_preview1 path_remove_directory
 func Path_remove_directory(
 	fd Fd_t,
 	path *byte,
 	path_len size_t,
 ) Errno
 
-//go:wasmimport Path_rename wasi_unstable path_rename
+//go:wasmimport wasi_snapshot_preview1 path_rename
 func Path_rename(
 	old_fd Fd_t,
 	old_path *byte,
@@ -255,7 +255,7 @@ func Path_rename(
 	new_path_len size_t,
 ) Errno
 
-//go:wasmimport Path_symlink wasi_unstable path_symlink
+//go:wasmimport wasi_snapshot_preview1 path_symlink
 func Path_symlink(
 	old_path *byte,
 	old_path_len size_t,
@@ -264,14 +264,14 @@ func Path_symlink(
 	new_path_len size_t,
 ) Errno
 
-//go:wasmimport Path_unlink_file wasi_unstable path_unlink_file
+//go:wasmimport wasi_snapshot_preview1 path_unlink_file
 func Path_unlink_file(
 	fd Fd_t,
 	path *byte,
 	path_len size_t,
 ) Errno
 
-//go:wasmimport Path_open wasi_unstable path_open
+//go:wasmimport wasi_snapshot_preview1 path_open
 func Path_open(
 	rootFD Fd_t,
 	dirflags Lookupflags_t,
@@ -284,7 +284,7 @@ func Path_open(
 	fd *Fd_t,
 ) Errno
 
-//go:wasmimport Random_get wasi_unstable random_get
+//go:wasmimport wasi_snapshot_preview1 random_get
 func Random_get(
 	buf *byte,
 	buf_len size_t,
