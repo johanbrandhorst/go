@@ -171,6 +171,7 @@ type pragmas struct {
 	Pos        []pragmaPos   // position of each individual flag
 	Embeds     []pragmaEmbed
 	WasmImport *WasmImport
+	WasmExport *WasmExport
 }
 
 // WasmImport stores metadata associated with the //go:wasmimport pragma
@@ -178,6 +179,12 @@ type WasmImport struct {
 	Pos    syntax.Pos
 	Module string
 	Name   string
+}
+
+// WasmExport stores metadata associated with the //go:wasmexport pragma
+type WasmExport struct {
+	Pos  syntax.Pos
+	Name string
 }
 
 type pragmaPos struct {
@@ -203,6 +210,9 @@ func (p *noder) checkUnusedDuringParse(pragma *pragmas) {
 	}
 	if pragma.WasmImport != nil {
 		p.error(syntax.Error{Pos: pragma.WasmImport.Pos, Msg: "misplaced go:wasmimport directive"})
+	}
+	if pragma.WasmExport != nil {
+		p.error(syntax.Error{Pos: pragma.WasmExport.Pos, Msg: "misplaced go:wasmexport directive"})
 	}
 }
 
@@ -246,6 +256,36 @@ func (p *noder) pragma(pos syntax.Pos, blankLine bool, text string, old syntax.P
 				Name:   f[2],
 			}
 		}
+
+	case strings.HasPrefix(text, "go:wasmexport "):
+		f := strings.Fields(text)
+		var name string
+		if len(f) == 1 {
+			// Short form, infer name from function name
+			// TODO: How do we get the function name?
+		} else if len(f) == 2 {
+			name = f[1]
+		} else {
+			p.error(syntax.Error{Pos: pos, Msg: "usage: //go:wasmexport [name]"})
+			break
+		}
+		if name == "_initialize" {
+			p.error(syntax.Error{Pos: pos, Msg: "_initialize is a reserved wasm export name"})
+			break
+		}
+		if name == "_start" {
+			p.error(syntax.Error{Pos: pos, Msg: "_start is a reserved wasm export name"})
+			break
+		}
+		if buildcfg.GOOS != "wasip1" {
+			p.error(syntax.Error{Pos: pos, Msg: "//go:wasmexport is only supported on wasip1"})
+			break
+		}
+		pragma.WasmExport = &WasmExport{
+			Pos:  pos,
+			Name: name,
+		}
+
 	case strings.HasPrefix(text, "go:linkname "):
 		f := strings.Fields(text)
 		if !(2 <= len(f) && len(f) <= 3) {

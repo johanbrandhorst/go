@@ -745,6 +745,12 @@ are:
 		into a C shared library. The only callable symbols will
 		be those functions exported using a cgo //export comment.
 		Requires exactly one main package to be listed.
+		When the target GOOS is wasip1, the callable symbols are
+		instead identified by the //go:wasmexport compiler directive.
+		The compiled Wasm module will export an _initialize method
+		instead of the usual _start method, which must be called
+		by hosts to initialize the Go runtime before any callable
+		symbols can be called.
 
 	-buildmode=default
 		Listed main packages are built into executables and listed
