@@ -317,5 +317,19 @@ Wasm according to the following table:
 
 Any other parameter types are disallowed by the compiler.
 
+	//go:wasmexport [name]
+
+The //go:wasmexport directive is wasip1-only and must be followed by a
+function declaration.
+It specifies that the function should be exported to the compiled wasm
+module under the specified name. The name is optional and will default
+to the name of the function.
+
+	//go:wasmexport f
+	func g()
+
+The parameters and return values of the exported function have the same constraints
+as for the //go:wasmimport directive.
+
 */
 package main

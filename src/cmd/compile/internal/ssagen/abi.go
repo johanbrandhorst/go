@@ -371,7 +371,12 @@ func paramsToWasmFields(f *ir.Func, result *abi.ABIParamResultInfo, abiParams []
 		case types.TUNSAFEPTR:
 			wfs[i].Type = obj.WasmPtr
 		default:
-			base.ErrorfAt(f.Pos(), 0, "go:wasmimport %s %s: unsupported parameter type %s", f.WasmImport.Module, f.WasmImport.Name, t.String())
+			if f.WasmImport != nil {
+				base.ErrorfAt(f.Pos(), 0, "go:wasmimport %s %s: unsupported parameter type %s", f.WasmImport.Module, f.WasmImport.Name, t.String())
+			}
+			if f.WasmExport != nil {
+				base.ErrorfAt(f.Pos(), 0, "go:wasmexport %s: unsupported parameter type %s", f.WasmExport.Name, t.String())
+			}
 		}
 		wfs[i].Offset = p.FrameOffset(result)
 	}
@@ -396,7 +401,12 @@ func resultsToWasmFields(f *ir.Func, result *abi.ABIParamResultInfo, abiParams [
 		case types.TFLOAT64:
 			wfs[i].Type = obj.WasmF64
 		default:
-			base.ErrorfAt(f.Pos(), 0, "go:wasmimport %s %s: unsupported result type %s", f.WasmImport.Module, f.WasmImport.Name, t.String())
+			if f.WasmImport != nil {
+				base.ErrorfAt(f.Pos(), 0, "go:wasmimport %s %s: unsupported parameter type %s", f.WasmImport.Module, f.WasmImport.Name, t.String())
+			}
+			if f.WasmExport != nil {
+				base.ErrorfAt(f.Pos(), 0, "go:wasmexport %s: unsupported parameter type %s", f.WasmExport.Name, t.String())
+			}
 		}
 		wfs[i].Offset = p.FrameOffset(result)
 	}
