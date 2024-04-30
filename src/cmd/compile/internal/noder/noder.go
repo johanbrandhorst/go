@@ -260,10 +260,11 @@ func (p *noder) pragma(pos syntax.Pos, blankLine bool, text string, old syntax.P
 	case strings.HasPrefix(text, "go:wasmexport "):
 		f := strings.Fields(text)
 		var name string
-		if len(f) == 1 {
-			// Short form, infer name from function name
-			// TODO: How do we get the function name?
-		} else if len(f) == 2 {
+		// TODO: relax constraint so we can omit the name and use the function
+		// name instead. At this stage, we can't get the function name, so we
+		// could consider the empty string to mean "use the function name",
+		// and handle it later in the compiler.
+		if len(f) == 2 {
 			name = f[1]
 		} else {
 			p.error(syntax.Error{Pos: pos, Msg: "usage: //go:wasmexport [name]"})
