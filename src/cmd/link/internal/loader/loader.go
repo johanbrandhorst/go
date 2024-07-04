@@ -1630,6 +1630,23 @@ func (l *Loader) WasmImportSym(fnSymIdx Sym) (Sym, bool) {
 	return 0, false
 }
 
+func (l *Loader) WasmExportSym(fnSymIdx Sym) (Sym, bool) {
+	if l.SymType(fnSymIdx) != sym.STEXT {
+		log.Fatalf("error: non-function sym %d/%s t=%s passed to WasmExportSym", fnSymIdx, l.SymName(fnSymIdx), l.SymType(fnSymIdx).String())
+	}
+	r, li := l.toLocal(fnSymIdx)
+	auxs := r.Auxs(li)
+	for i := range auxs {
+		a := &auxs[i]
+		switch a.Type() {
+		case goobj.AuxWasmExport:
+			return l.resolve(r, a.Sym()), true
+		}
+	}
+
+	return 0, false
+}
+
 // SEHUnwindSym returns the auxiliary SEH unwind symbol associated with
 // a given function symbol.
 func (l *Loader) SEHUnwindSym(fnSymIdx Sym) Sym {

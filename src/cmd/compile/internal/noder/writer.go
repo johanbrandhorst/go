@@ -5,6 +5,11 @@
 package noder
 
 import (
+	"cmd/compile/internal/base"
+	"cmd/compile/internal/ir"
+	"cmd/compile/internal/syntax"
+	"cmd/compile/internal/types"
+	"cmd/compile/internal/types2"
 	"fmt"
 	"go/constant"
 	"go/token"
@@ -12,12 +17,6 @@ import (
 	"internal/buildcfg"
 	"internal/pkgbits"
 	"os"
-
-	"cmd/compile/internal/base"
-	"cmd/compile/internal/ir"
-	"cmd/compile/internal/syntax"
-	"cmd/compile/internal/types"
-	"cmd/compile/internal/types2"
 )
 
 // This file implements the Unified IR package writer and defines the
@@ -1033,6 +1032,8 @@ func (w *writer) funcExt(obj *types2.Func) {
 	}
 	wi := asWasmImport(decl.Pragma)
 
+	we := asWasmExport(decl.Pragma)
+
 	if decl.Body != nil {
 		if pragma&ir.Noescape != 0 {
 			w.p.errorf(decl, "can only use //go:noescape with external func implementations")
@@ -1065,6 +1066,9 @@ func (w *writer) funcExt(obj *types2.Func) {
 				w.p.errorf(decl, "missing function body")
 			}
 		}
+		if we != nil {
+			w.p.errorf(decl, "can only use //go:wasmexport with func body")
+		}
 	}
 
 	sig, block := obj.Type().(*types2.Signature), decl.Body
@@ -1083,8 +1087,13 @@ func (w *writer) funcExt(obj *types2.Func) {
 			w.String(wi.Module)
 			w.String(wi.Name)
 		} else {
-			w.String("")
-			w.String("")
+			if we != nil {
+				w.String("wasip1_export")
+				w.String(we.Name)
+			} else {
+				w.String("")
+				w.String("")
+			}
 		}
 	}
 
@@ -2963,6 +2972,13 @@ func asWasmImport(p syntax.Pragma) *WasmImport {
 		return nil
 	}
 	return p.(*pragmas).WasmImport
+}
+
+func asWasmExport(p syntax.Pragma) *WasmExport {
+	if p == nil {
+		return nil
+	}
+	return p.(*pragmas).WasmExport
 }
 
 // isPtrTo reports whether from is the type *to.

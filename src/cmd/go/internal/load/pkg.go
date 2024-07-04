@@ -2573,7 +2573,7 @@ func LinkerDeps(p *Package) ([]string, error) {
 	deps := []string{"runtime"}
 
 	// External linking mode forces an import of runtime/cgo.
-	if what := externalLinkingReason(p); what != "" && cfg.BuildContext.Compiler != "gccgo" {
+	if what := externalLinkingReason(p); what != "" && cfg.BuildContext.Compiler != "gccgo" && cfg.BuildContext.GOOS != "wasip1" {
 		if !cfg.BuildContext.CgoEnabled {
 			return nil, fmt.Errorf("%s requires external (cgo) linking, but cgo is not enabled", what)
 		}

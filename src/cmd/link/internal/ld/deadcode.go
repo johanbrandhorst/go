@@ -56,6 +56,25 @@ func (d *deadcodePass) init() {
 		return
 	}
 
+	if d.ctxt.BuildMode == BuildModeCShared && d.ctxt.IsWasm() {
+		n := d.ldr.NDef()
+		for i := 1; i < n; i++ {
+			s := loader.Sym(i)
+			if d.ldr.SymType(s) == sym.STEXT && d.ldr.SymSize(s) == 0 {
+				// Zero-sized text symbol is a function deadcoded by the
+				// compiler. It doesn't really get compiled, and its
+				// metadata may be missing.
+				continue
+			}
+			relocs := d.ldr.Relocs(s)
+			for i := 0; i < relocs.Count(); i++ {
+				if relocs.At(i).Type() == objabi.R_WASMEXPORT {
+					d.mark(s, 0)
+				}
+			}
+		}
+	}
+
 	var names []string
 
 	// In a normal binary, start at main.main and the init
@@ -190,6 +209,8 @@ func (d *deadcodePass) flood() {
 				}
 				i += 2
 				continue
+			case objabi.R_WASMEXPORT:
+				d.ldr.SetAttrReachable(r.Sym(), true)
 			case objabi.R_USETYPE:
 				// type symbol used for DWARF. we need to load the symbol but it may not
 				// be otherwise reachable in the program.

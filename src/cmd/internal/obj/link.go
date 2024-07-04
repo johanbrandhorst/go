@@ -499,6 +499,9 @@ type FuncInfo struct {
 	WasmImportSym *LSym
 	WasmImport    *WasmImport
 
+	WasmExport    *WasmExport
+	WasmExportSym *LSym
+
 	sehUnwindInfoSym *LSym
 }
 
@@ -596,6 +599,53 @@ func (s *LSym) NewTypeInfo() *TypeInfo {
 	s.Extra = new(interface{})
 	*s.Extra = t
 	return t
+}
+
+// WasmExport represents a WebAssembly (WASM) imported function with
+// parameters and results translated into WASM types based on the Go function
+// declaration.
+type WasmExport struct {
+	// Name holds the WASM imported function name specified by the
+	// //go:wasmimport directive.
+	Name string
+	// Params holds the imported function parameter fields.
+	Params []WasmField
+	// Results holds the imported function result fields.
+	Results []WasmField
+}
+
+func (wi *WasmExport) CreateSym(ctxt *Link) *LSym {
+	var sym LSym
+
+	var b [8]byte
+	writeByte := func(x byte) {
+		sym.WriteBytes(ctxt, sym.Size, []byte{x})
+	}
+	writeUint32 := func(x uint32) {
+		binary.LittleEndian.PutUint32(b[:], x)
+		sym.WriteBytes(ctxt, sym.Size, b[:4])
+	}
+	writeInt64 := func(x int64) {
+		binary.LittleEndian.PutUint64(b[:], uint64(x))
+		sym.WriteBytes(ctxt, sym.Size, b[:])
+	}
+	writeString := func(s string) {
+		writeUint32(uint32(len(s)))
+		sym.WriteString(ctxt, sym.Size, len(s), s)
+	}
+	writeString(wi.Name)
+	writeUint32(uint32(len(wi.Params)))
+	for _, f := range wi.Params {
+		writeByte(byte(f.Type))
+		writeInt64(f.Offset)
+	}
+	writeUint32(uint32(len(wi.Results)))
+	for _, f := range wi.Results {
+		writeByte(byte(f.Type))
+		writeInt64(f.Offset)
+	}
+
+	return &sym
 }
 
 // WasmImport represents a WebAssembly (WASM) imported function with

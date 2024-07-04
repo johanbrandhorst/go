@@ -383,7 +383,7 @@ func (st *relocSymState) relocsym(s loader.Sym, P []byte) {
 						// See also machoreloc1.
 						o += ldr.SymValue(rs)
 					}
-				} else if target.IsWindows() {
+				} else if target.IsWindows() || target.IsWasm() {
 					// nothing to do
 				} else if target.IsAIX() {
 					o = ldr.SymValue(rs) + xadd
@@ -2652,7 +2652,6 @@ func assignAddress(ctxt *Link, sect *sym.Section, n int, s loader.Sym, va uint64
 			n++
 		}
 	}
-
 	ldr.SetSymValue(s, 0)
 	for sub := s; sub != 0; sub = ldr.SubSym(sub) {
 		ldr.SetSymValue(sub, ldr.SymValue(sub)+int64(va))

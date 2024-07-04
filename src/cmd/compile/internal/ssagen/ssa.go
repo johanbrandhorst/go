@@ -228,6 +228,10 @@ func AbiForBodylessFuncStackMap(fn *ir.Func) *abi.ABIConfig {
 	return ssaConfig.ABI0.Copy() // No idea what races will result, be safe
 }
 
+func AbiForBodyFuncStackMap(fn *ir.Func) *abi.ABIConfig {
+	return abiForFunc(fn, ssaConfig.ABI0.Copy(), ssaConfig.ABI1.Copy())
+}
+
 // abiForFunc implements ABI policy for a function, but does not return a copy of the ABI.
 // Passing a nil function returns the default ABI based on experiment configuration.
 func abiForFunc(fn *ir.Func, abi0, abi1 *abi.ABIConfig) *abi.ABIConfig {

@@ -5,12 +5,6 @@
 package ssagen
 
 import (
-	"fmt"
-	"internal/buildcfg"
-	"log"
-	"os"
-	"strings"
-
 	"cmd/compile/internal/abi"
 	"cmd/compile/internal/base"
 	"cmd/compile/internal/ir"
@@ -19,6 +13,11 @@ import (
 	"cmd/compile/internal/types"
 	"cmd/internal/obj"
 	"cmd/internal/obj/wasm"
+	"fmt"
+	"internal/buildcfg"
+	"log"
+	"os"
+	"strings"
 )
 
 // SymABIs records information provided by the assembler about symbol
@@ -447,4 +446,16 @@ func setupWasmABI(f *ir.Func) {
 		wi.Results = resultsToWasmFields(f, abiInfo, abiInfo.OutParams())
 	}
 	f.LSym.Func().WasmImport = &wi
+}
+
+// setupWasmABI calculates the params and results in terms of WebAssembly values for the given function.
+func SetupWasmABIExport(f *ir.Func) {
+	wi := obj.WasmExport{
+		Name: f.WasmExport.Name,
+	}
+	abiConfig := AbiForBodyFuncStackMap(f)
+	abiInfo := abiConfig.ABIAnalyzeFuncType(f.Type())
+	wi.Params = paramsToWasmFields(f, abiInfo, abiInfo.InParams())
+	wi.Results = resultsToWasmFields(f, abiInfo, abiInfo.OutParams())
+	f.LSym.Func().WasmExport = &wi
 }

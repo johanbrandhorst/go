@@ -133,6 +133,7 @@ var (
 const (
 	/* mark flags */
 	WasmImport = 1 << 0
+	WasmExport = 2 << 0
 )
 
 const (
@@ -185,10 +186,71 @@ func preprocess(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 	s.Func().Args = s.Func().Text.To.Val.(int32)
 	s.Func().Locals = int32(framesize)
 
-	// If the function exits just to call out to a wasmimport, then
-	// generate the code to translate from our internal Go-stack
-	// based call convention to the native webassembly call convention.
-	if wi := s.Func().WasmImport; wi != nil {
+	if we := s.Func().WasmExport; we != nil {
+		// If the function exits just to call out to a wasmimport, then
+		// generate the code to translate from our internal Go-stack
+		// based call convention to the native webassembly call convention.
+		s.Func().WasmExportSym = we.CreateSym(ctxt)
+		p := s.Func().Text
+		to := obj.Addr{
+			Type: obj.TYPE_MEM,
+			Name: obj.NAME_STATIC,
+			Sym:  s,
+		}
+
+		if len(we.Results) > 1 {
+			panic("invalid results type") // impossible until multi-value proposal has landed
+		}
+		if len(we.Results) == 1 {
+			p = appendp(p, AGet, regAddr(REG_SP))
+		}
+		for _, f := range we.Params {
+			p = appendp(p, AGet, regAddr(REG_SP))
+			loadOffset := f.Offset + 8
+			switch f.Type {
+			case obj.WasmI32:
+				p = appendp(p, AI32Load, constAddr(loadOffset))
+			case obj.WasmI64:
+				p = appendp(p, AI64Load, constAddr(loadOffset))
+			case obj.WasmF32:
+				p = appendp(p, AF32Load, constAddr(loadOffset))
+			case obj.WasmF64:
+				p = appendp(p, AF64Load, constAddr(loadOffset))
+			case obj.WasmPtr:
+				p = appendp(p, AI64Load, constAddr(loadOffset))
+				p = appendp(p, AI32WrapI64)
+			default:
+				panic("bad param type")
+			}
+		}
+
+		p = appendp(p, ACall, to)
+		p.Mark = WasmExport
+
+		if len(we.Results) == 1 {
+			f := we.Results[0]
+
+			storeOffset := f.Offset + 8
+
+			switch f.Type {
+			case obj.WasmI32:
+				p = appendp(p, AI32Store, constAddr(storeOffset))
+			case obj.WasmI64:
+				p = appendp(p, AI64Store, constAddr(storeOffset))
+			case obj.WasmF32:
+				p = appendp(p, AF32Store, constAddr(storeOffset))
+			case obj.WasmF64:
+				p = appendp(p, AF64Store, constAddr(storeOffset))
+			case obj.WasmPtr:
+				p = appendp(p, AI64ExtendI32U)
+				p = appendp(p, AI64Store, constAddr(storeOffset))
+			default:
+				panic("bad result type")
+			}
+		}
+
+		p = appendp(p, obj.ARET)
+	} else if wi := s.Func().WasmImport; wi != nil {
 		s.Func().WasmImportSym = wi.CreateSym(ctxt)
 		p := s.Func().Text
 		if p.Link != nil {
@@ -905,8 +967,9 @@ func regAddr(reg int16) obj.Addr {
 // Most of the Go functions has a single parameter (PC_B) in
 // Wasm ABI. This is a list of exceptions.
 var notUsePC_B = map[string]bool{
-	"_rt0_wasm_js":            true,
-	"_rt0_wasm_wasip1":        true,
+	"_rt0_wasm_js":     true,
+	"_rt0_wasm_wasip1": true,
+	"_rt0_wasm_wasip1_lib":    true,
 	"wasm_export_run":         true,
 	"wasm_export_resume":      true,
 	"wasm_export_getsp":       true,
@@ -961,7 +1024,7 @@ func assemble(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 	// Function starts with declaration of locals: numbers and types.
 	// Some functions use a special calling convention.
 	switch s.Name {
-	case "_rt0_wasm_js", "_rt0_wasm_wasip1", "wasm_export_run", "wasm_export_resume", "wasm_export_getsp",
+	case "_rt0_wasm_js", "_rt0_wasm_wasip1", "_rt0_wasm_wasip1_lib", "wasm_export_run", "wasm_export_resume", "wasm_export_getsp",
 		"wasm_pc_f_loop", "runtime.wasmDiv", "runtime.wasmTruncS", "runtime.wasmTruncU", "memeqbody":
 		varDecls = []*varDecl{}
 		useAssemblyRegMap()
@@ -1153,6 +1216,10 @@ func assemble(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 				if p.Mark&WasmImport != 0 {
 					r.Type = objabi.R_WASMIMPORT
 				}
+				if p.Mark&WasmExport != 0 {
+					r.Type = objabi.R_WASMEXPORT
+				}
+
 				r.Sym = p.To.Sym
 				if hasLocalSP {
 					// The stack may have moved, which changes SP. Update the local SP variable.
