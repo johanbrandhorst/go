@@ -563,6 +563,7 @@ func writeExportSec(ctxt *ld.Link, ldr *loader.Loader, lenHostImports int, expor
 		}
 		exportsFn := map[string]string{
 			startName: exportedName,
+			// "main.toto":"toto",
 		}
 		for _, export := range exports {
 			exportsFn[export.Name] = export.ExportedName
