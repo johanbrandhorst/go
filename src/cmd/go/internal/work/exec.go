@@ -412,7 +412,7 @@ func (b *Builder) buildActionID(a *Action) cache.ActionID {
 // expect to be able to access the cgo-generated header file.
 func (b *Builder) needCgoHdr(a *Action) bool {
 	// If this build triggers a header install, run cgo to get the header.
-	if !b.IsCmdList && (a.Package.UsesCgo() || a.Package.UsesSwig()) && (cfg.BuildBuildmode == "c-archive" || cfg.BuildBuildmode == "c-shared") {
+	if !b.IsCmdList && (a.Package.UsesCgo() || a.Package.UsesSwig()) && (cfg.BuildBuildmode == "c-archive" || cfg.BuildBuildmode == "c-shared") && cfg.Goos != "wasip1" {
 		for _, t1 := range a.triggers {
 			if t1.Mode == "install header" {
 				return true
@@ -781,7 +781,9 @@ OverlayLoop:
 
 		switch cfg.BuildBuildmode {
 		case "c-archive", "c-shared":
-			b.cacheCgoHdr(a)
+			if cfg.Goos != "wasip1" {
+				b.cacheCgoHdr(a)
+			}
 		}
 	}
 
@@ -2846,7 +2848,9 @@ func (b *Builder) cgo(a *Action, cgoExe, objdir string, pcCFLAGS, pcLDFLAGS, cgo
 		// Tell cgo that if there are any exported functions
 		// it should generate a header file that C code can
 		// #include.
-		cgoflags = append(cgoflags, "-exportheader="+objdir+"_cgo_install.h")
+		if cfg.Goos != "wasip1" {
+			cgoflags = append(cgoflags, "-exportheader="+objdir+"_cgo_install.h")
+		}
 	}
 
 	// Rewrite overlaid paths in cgo files.

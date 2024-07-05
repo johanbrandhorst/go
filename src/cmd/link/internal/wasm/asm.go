@@ -55,6 +55,12 @@ type wasmFunc struct {
 	Code   []byte
 }
 
+type wasmExportedFunc struct {
+	ExportedName string
+	Name         string
+	Type         uint32
+}
+
 type wasmFuncType struct {
 	Params  []byte
 	Results []byte
@@ -113,9 +119,62 @@ func readWasmImport(ldr *loader.Loader, s loader.Sym) obj.WasmImport {
 	return wi
 }
 
+func readWasmExport(ldr *loader.Loader, s loader.Sym) obj.WasmExport {
+	reportError := func(err error) { panic(fmt.Sprintf("failed to read WASM export in sym %v: %v", s, err)) }
+
+	data := ldr.Data(s)
+
+	readUint32 := func() (v uint32) {
+		v = binary.LittleEndian.Uint32(data)
+		data = data[4:]
+		return
+	}
+
+	readUint64 := func() (v uint64) {
+		v = binary.LittleEndian.Uint64(data)
+		data = data[8:]
+		return
+	}
+
+	readByte := func() byte {
+		if len(data) == 0 {
+			reportError(io.EOF)
+		}
+
+		b := data[0]
+		data = data[1:]
+		return b
+	}
+
+	readString := func() string {
+		n := readUint32()
+
+		s := string(data[:n])
+
+		data = data[n:]
+
+		return s
+	}
+
+	var we obj.WasmExport
+	we.Name = readString()
+	we.Params = make([]obj.WasmField, readUint32())
+	for i := range we.Params {
+		we.Params[i].Type = obj.WasmFieldType(readByte())
+		we.Params[i].Offset = int64(readUint64())
+	}
+	we.Results = make([]obj.WasmField, readUint32())
+	for i := range we.Results {
+		we.Results[i].Type = obj.WasmFieldType(readByte())
+		we.Results[i].Offset = int64(readUint64())
+	}
+	return we
+}
+
 var wasmFuncTypes = map[string]*wasmFuncType{
 	"_rt0_wasm_js":            {Params: []byte{}},                                         //
 	"_rt0_wasm_wasip1":        {Params: []byte{}},                                         //
+	"_rt0_wasm_wasip1_lib":    {Params: []byte{}},                                         //
 	"wasm_export__start":      {},                                                         //
 	"wasm_export_run":         {Params: []byte{I32, I32}},                                 // argc, argv
 	"wasm_export_resume":      {Params: []byte{}},                                         //
@@ -225,6 +284,34 @@ func asmb2(ctxt *ld.Link, ldr *loader.Loader) {
 		}
 	}
 
+	hostExports := make(map[string]*wasmExportedFunc)
+	hostExportMap := make(map[loader.Sym]int64)
+
+	for _, fn := range ctxt.Textp {
+		relocs := ldr.Relocs(fn)
+		for ri := 0; ri < relocs.Count(); ri++ {
+			r := relocs.At(ri)
+			if r.Type() == objabi.R_WASMEXPORT {
+				if lsym, ok := ldr.WasmExportSym(fn); ok {
+					wi := readWasmExport(ldr, lsym)
+					hostExportMap[fn] = int64(len(hostExports))
+					hostExports[ldr.SymName(fn)] = &wasmExportedFunc{
+						Name:         ldr.SymName(fn),
+						ExportedName: wi.Name,
+						Type:         lookupType(&wasmFuncType{
+							// Params:  fieldsToTypes(wi.Params),
+							// Results: fieldsToTypes(wi.Results),
+							// Params:  fieldsToTypes([]obj.WasmField{}),
+							// Results: fieldsToTypes(wi.Results),
+						}, &types),
+					}
+				} else {
+					panic(fmt.Sprintf("missing wasm symbol for %s", ldr.SymName(r.Sym())))
+				}
+			}
+		}
+	}
+
 	// collect functions with WebAssembly body
 	var buildid []byte
 	fns := make([]*wasmFunc, len(ctxt.Textp))
@@ -253,6 +340,8 @@ func asmb2(ctxt *ld.Link, ldr *loader.Loader) {
 					writeSleb128(wfn, ldr.SymValue(rs)+r.Add())
 				case objabi.R_CALL:
 					writeSleb128(wfn, int64(len(hostImports))+ldr.SymValue(rs)>>16-funcValueOffset)
+				case objabi.R_WASMEXPORT:
+					// WASM_EXPORT do nothing
 				case objabi.R_WASMIMPORT:
 					writeSleb128(wfn, hostImportMap[rs])
 				default:
@@ -266,6 +355,8 @@ func asmb2(ctxt *ld.Link, ldr *loader.Loader) {
 		typ := uint32(0)
 		if sig, ok := wasmFuncTypes[ldr.SymName(fn)]; ok {
 			typ = lookupType(sig, &types)
+			// } else if sig, ok := hostExports[ldr.SymName(fn)]; ok {
+			// 	typ = sig.Type
 		}
 
 		name := nameRegexp.ReplaceAllString(ldr.SymName(fn), "_")
@@ -286,7 +377,7 @@ func asmb2(ctxt *ld.Link, ldr *loader.Loader) {
 	writeTableSec(ctxt, fns)
 	writeMemorySec(ctxt, ldr)
 	writeGlobalSec(ctxt)
-	writeExportSec(ctxt, ldr, len(hostImports))
+	writeExportSec(ctxt, ldr, len(hostImports), hostExports)
 	writeElementSec(ctxt, uint64(len(hostImports)), uint64(len(fns)))
 	writeCodeSec(ctxt, fns)
 	writeDataSec(ctxt)
@@ -447,23 +538,45 @@ func writeGlobalSec(ctxt *ld.Link) {
 	writeSecSize(ctxt, sizeOffset)
 }
 
+func writeExportFunc(ctxt *ld.Link, ldr *loader.Loader, lenHostImports int, originFn, exportFn string) {
+	s := ldr.Lookup(originFn, 0)
+	idx := uint32(lenHostImports) + uint32(ldr.SymValue(s)>>16) - funcValueOffset
+
+	writeName(ctxt.Out, exportFn)       // the wasi entrypoint
+	ctxt.Out.WriteByte(0x00)            // func export
+	writeUleb128(ctxt.Out, uint64(idx)) // funcidx
+
+}
+
 // writeExportSec writes the section that declares exports.
 // Exports can be accessed by the WebAssembly host, usually JavaScript.
 // The wasm_export_* functions and the linear memory get exported.
-func writeExportSec(ctxt *ld.Link, ldr *loader.Loader, lenHostImports int) {
+func writeExportSec(ctxt *ld.Link, ldr *loader.Loader, lenHostImports int, exports map[string]*wasmExportedFunc) {
 	sizeOffset := writeSecHeader(ctxt, sectionExport)
-
 	switch buildcfg.GOOS {
 	case "wasip1":
-		writeUleb128(ctxt.Out, 2) // number of exports
-		s := ldr.Lookup("_rt0_wasm_wasip1", 0)
-		idx := uint32(lenHostImports) + uint32(ldr.SymValue(s)>>16) - funcValueOffset
-		writeName(ctxt.Out, "_start")       // the wasi entrypoint
-		ctxt.Out.WriteByte(0x00)            // func export
-		writeUleb128(ctxt.Out, uint64(idx)) // funcidx
-		writeName(ctxt.Out, "memory")       // memory in wasi
-		ctxt.Out.WriteByte(0x02)            // mem export
-		writeUleb128(ctxt.Out, 0)           // memidx
+		startName := "_rt0_wasm_wasip1"
+		exportedName := "_start"
+		if ctxt.BuildMode == ld.BuildModeCShared  {
+			startName = "_rt0_wasm_wasip1_lib"
+			exportedName = "_initialize"
+		}
+		exportsFn := map[string]string{
+			startName: exportedName,
+			// "main.toto":"toto",
+		}
+		for _, export := range exports {
+			exportsFn[export.Name] = export.ExportedName
+		}
+		writeUleb128(ctxt.Out, uint64(len(exportsFn)+1)) // number of exports
+
+		for originFn, exportFn := range exportsFn {
+			writeExportFunc(ctxt, ldr, lenHostImports, originFn, exportFn)
+		}
+
+		writeName(ctxt.Out, "memory") // memory in wasi
+		ctxt.Out.WriteByte(0x02)      // mem export
+		writeUleb128(ctxt.Out, 0)     // memidx
 	case "js":
 		writeUleb128(ctxt.Out, 4) // number of exports
 		for _, name := range []string{"run", "resume", "getsp"} {

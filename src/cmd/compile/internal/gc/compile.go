@@ -93,6 +93,9 @@ func prepareFunc(fn *ir.Func) {
 	// (e.g. in MarkTypeUsedInInterface).
 	ir.InitLSym(fn, true)
 
+	if fn.WasmExport != nil {
+		ssagen.SetupWasmABIExport(fn)
+	}
 	// If this function is a compiler-generated outlined global map
 	// initializer function, register its LSym for later processing.
 	if staticinit.MapInitToVar != nil {

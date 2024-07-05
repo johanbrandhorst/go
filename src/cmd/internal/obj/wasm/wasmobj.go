@@ -133,6 +133,7 @@ var (
 const (
 	/* mark flags */
 	WasmImport = 1 << 0
+	WasmExport = 2 << 0
 )
 
 const (
@@ -185,10 +186,103 @@ func preprocess(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 	s.Func().Args = s.Func().Text.To.Val.(int32)
 	s.Func().Locals = int32(framesize)
 
-	// If the function exits just to call out to a wasmimport, then
-	// generate the code to translate from our internal Go-stack
-	// based call convention to the native webassembly call convention.
-	if wi := s.Func().WasmImport; wi != nil {
+	if we := s.Func().WasmExport; we != nil {
+		// If the function exits just to call out to a wasmimport, then
+		// generate the code to translate from our internal Go-stack
+		// based call convention to the native webassembly call convention.
+		s.Func().WasmExportSym = we.CreateSym(ctxt)
+		p := s.Func().Text
+		// to := obj.Addr{
+		// 	Type: obj.TYPE_MEM,
+		// 	Name: obj.NAME_STATIC,
+		// 	Sym:  s,
+		// }
+		//
+		// // If the module that the import is for is our magic "gojs" module, then this
+		// // indicates that the called function understands the Go stack-based call convention
+		// // so we just pass the stack pointer to it, knowing it will read the params directly
+		// // off the stack and push the results into memory based on the stack pointer.
+		// if len(we.Results) > 1 {
+		// 	// TODO(evanphx) implement support for the multi-value proposal:
+		// 	// https://github.com/WebAssembly/multi-value/blob/master/proposals/multi-value/Overview.md
+		// 	panic("invalid results type") // impossible until multi-value proposal has landed
+		// }
+		// if len(we.Results) == 1 {
+		// 	// If we have a result (rather than returning nothing at all), then
+		// 	// we'll write the result to the Go stack relative to the current stack pointer.
+		// 	// We cache the current stack pointer value on the wasm stack here and then use
+		// 	// it after the Call instruction to store the result.
+		// 	p = appendp(p, AGet, regAddr(REG_SP))
+		// }
+		// for _, f := range we.Params {
+		// 	// Each load instructions will consume the value of sp on the stack, so
+		// 	// we need to read sp for each param. WASM appears to not have a stack dup instruction
+		// 	// (a strange omission for a stack-based VM), if it did, we'd be using the dup here.
+		// 	p = appendp(p, AGet, regAddr(REG_SP))
+		//
+		// 	// Offset is the location of the param on the Go stack (ie relative to sp).
+		// 	// Because of our call convention, the parameters are located an additional 8 bytes
+		// 	// from sp because we store the return address as an int64 at the bottom of the stack.
+		// 	// Ie the stack looks like [return_addr, param3, param2, param1, etc]
+		//
+		// 	// Ergo, we add 8 to the true byte offset of the param to skip the return address.
+		// 	loadOffset := f.Offset + 8
+		//
+		// 	// We're reading the value from the Go stack onto the WASM stack and leaving it there
+		// 	// for CALL to pick them up.
+		// 	switch f.Type {
+		// 	case obj.WasmI32:
+		// 		p = appendp(p, AI32Load, constAddr(loadOffset))
+		// 	case obj.WasmI64:
+		// 		p = appendp(p, AI64Load, constAddr(loadOffset))
+		// 	case obj.WasmF32:
+		// 		p = appendp(p, AF32Load, constAddr(loadOffset))
+		// 	case obj.WasmF64:
+		// 		p = appendp(p, AF64Load, constAddr(loadOffset))
+		// 	case obj.WasmPtr:
+		// 		p = appendp(p, AI64Load, constAddr(loadOffset))
+		// 		p = appendp(p, AI32WrapI64)
+		// 	default:
+		// 		panic("bad param type")
+		// 	}
+		// }
+
+		// The call instruction is marked as being for a wasm import so that a later phase
+		// will generate relocation information that allows us to patch this with then
+		// offset of the imported function in the wasm imports.
+		// p = appendp(p, ACall, to)
+		p.Mark = WasmExport
+
+		// if len(we.Results) == 1 {
+		// 	f := we.Results[0]
+		//
+		// 	// Much like with the params, we need to adjust the offset we store the result value
+		// 	// to by 8 bytes to account for the return address on the Go stack.
+		// 	storeOffset := f.Offset + 8
+		//
+		// 	// This code is paired the code above that reads the stack pointer onto the wasm
+		// 	// stack. We've done this so we have a consistent view of the sp value as it might
+		// 	// be manipulated by the call and we want to ignore that manipulation here.
+		// 	switch f.Type {
+		// 	case obj.WasmI32:
+		// 		p = appendp(p, AI32Store, constAddr(storeOffset))
+		// 	case obj.WasmI64:
+		// 		p = appendp(p, AI64Store, constAddr(storeOffset))
+		// 	case obj.WasmF32:
+		// 		p = appendp(p, AF32Store, constAddr(storeOffset))
+		// 	case obj.WasmF64:
+		// 		p = appendp(p, AF64Store, constAddr(storeOffset))
+		// 	case obj.WasmPtr:
+		// 		p = appendp(p, AI64ExtendI32U)
+		// 		p = appendp(p, AI64Store, constAddr(storeOffset))
+		// 	default:
+		// 		panic("bad result type")
+		// 	}
+		// }
+		//
+		// p = appendp(p, obj.ARET)
+	} else if wi := s.Func().WasmImport; wi != nil {
+		println("WASMIMPORT IN WASMOBJ")
 		s.Func().WasmImportSym = wi.CreateSym(ctxt)
 		p := s.Func().Text
 		if p.Link != nil {
@@ -905,8 +999,9 @@ func regAddr(reg int16) obj.Addr {
 // Most of the Go functions has a single parameter (PC_B) in
 // Wasm ABI. This is a list of exceptions.
 var notUsePC_B = map[string]bool{
-	"_rt0_wasm_js":            true,
-	"_rt0_wasm_wasip1":        true,
+	"_rt0_wasm_js":     true,
+	"_rt0_wasm_wasip1": true,
+	"_rt0_wasm_wasip1_lib":    true,
 	"wasm_export_run":         true,
 	"wasm_export_resume":      true,
 	"wasm_export_getsp":       true,
@@ -961,7 +1056,7 @@ func assemble(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 	// Function starts with declaration of locals: numbers and types.
 	// Some functions use a special calling convention.
 	switch s.Name {
-	case "_rt0_wasm_js", "_rt0_wasm_wasip1", "wasm_export_run", "wasm_export_resume", "wasm_export_getsp",
+	case "_rt0_wasm_js", "_rt0_wasm_wasip1", "_rt0_wasm_wasip1_lib", "wasm_export_run", "wasm_export_resume", "wasm_export_getsp",
 		"wasm_pc_f_loop", "runtime.wasmDiv", "runtime.wasmTruncS", "runtime.wasmTruncU", "memeqbody":
 		varDecls = []*varDecl{}
 		useAssemblyRegMap()
@@ -1037,6 +1132,11 @@ func assemble(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 	}
 
 	for p := s.Func().Text; p != nil; p = p.Link {
+		if p.Mark&WasmExport != 0 {
+			r := obj.Addrel(s)
+			r.Type = objabi.R_WASMEXPORT
+		}
+
 		switch p.As {
 		case AGet:
 			if p.From.Type != obj.TYPE_REG {
@@ -1153,6 +1253,7 @@ func assemble(ctxt *obj.Link, s *obj.LSym, newprog obj.ProgAlloc) {
 				if p.Mark&WasmImport != 0 {
 					r.Type = objabi.R_WASMIMPORT
 				}
+
 				r.Sym = p.To.Sym
 				if hasLocalSP {
 					// The stack may have moved, which changes SP. Update the local SP variable.

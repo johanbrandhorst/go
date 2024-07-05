@@ -615,6 +615,12 @@ func (w *writer) Aux(s *LSym) {
 			}
 			w.aux1(goobj.AuxWasmImport, fn.WasmImportSym)
 		}
+		if fn.WasmExport != nil {
+			if fn.WasmExportSym.Size == 0 {
+				panic("wasmimport aux sym must have non-zero size")
+			}
+			w.aux1(goobj.AuxWasmExport, fn.WasmExportSym)
+		}
 	} else if v := s.VarInfo(); v != nil {
 		if v.dwarfInfoSym != nil && v.dwarfInfoSym.Size != 0 {
 			w.aux1(goobj.AuxDwarfInfo, v.dwarfInfoSym)
@@ -725,6 +731,12 @@ func nAuxSym(s *LSym) int {
 			}
 			n++
 		}
+		if fn.WasmExport != nil {
+			if fn.WasmExportSym == nil || fn.WasmExportSym.Size == 0 {
+				panic("wasmexport aux sym must exist and have non-zero size")
+			}
+			n++
+		}
 	} else if v := s.VarInfo(); v != nil {
 		if v.dwarfInfoSym != nil && v.dwarfInfoSym.Size != 0 {
 			n++
@@ -785,7 +797,7 @@ func genFuncInfoSyms(ctxt *Link) {
 		fn.FuncInfoSym = isym
 		b.Reset()
 
-		auxsyms := []*LSym{fn.dwarfRangesSym, fn.dwarfLocSym, fn.dwarfDebugLinesSym, fn.dwarfInfoSym, fn.WasmImportSym, fn.sehUnwindInfoSym}
+		auxsyms := []*LSym{fn.dwarfRangesSym, fn.dwarfLocSym, fn.dwarfDebugLinesSym, fn.dwarfInfoSym, fn.WasmImportSym, fn.sehUnwindInfoSym, fn.WasmExportSym}
 		for _, s := range auxsyms {
 			if s == nil || s.Size == 0 {
 				continue

@@ -32,6 +32,17 @@ package ld
 
 import (
 	"bytes"
+	"cmd/internal/bio"
+	"cmd/internal/goobj"
+	"cmd/internal/notsha256"
+	"cmd/internal/objabi"
+	"cmd/internal/sys"
+	"cmd/link/internal/loadelf"
+	"cmd/link/internal/loader"
+	"cmd/link/internal/loadmacho"
+	"cmd/link/internal/loadpe"
+	"cmd/link/internal/loadxcoff"
+	"cmd/link/internal/sym"
 	"debug/elf"
 	"debug/macho"
 	"encoding/base64"
@@ -47,18 +58,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	"cmd/internal/bio"
-	"cmd/internal/goobj"
-	"cmd/internal/notsha256"
-	"cmd/internal/objabi"
-	"cmd/internal/sys"
-	"cmd/link/internal/loadelf"
-	"cmd/link/internal/loader"
-	"cmd/link/internal/loadmacho"
-	"cmd/link/internal/loadpe"
-	"cmd/link/internal/loadxcoff"
-	"cmd/link/internal/sym"
 )
 
 // Data layout and relocation.
@@ -572,7 +571,7 @@ func (ctxt *Link) loadlib() {
 	// We now have enough information to determine the link mode.
 	determineLinkMode(ctxt)
 
-	if ctxt.LinkMode == LinkExternal && !iscgo && !(buildcfg.GOOS == "darwin" && ctxt.BuildMode != BuildModePlugin && ctxt.Arch.Family == sys.AMD64) {
+	if ctxt.LinkMode == LinkExternal && !iscgo && !(buildcfg.GOOS == "darwin" && ctxt.BuildMode != BuildModePlugin && ctxt.Arch.Family == sys.AMD64) && !(buildcfg.GOOS == "wasip1" && buildcfg.GOARCH == "wasm") {
 		// This indicates a user requested -linkmode=external.
 		// The startup code uses an import of runtime/cgo to decide
 		// whether to initialize the TLS.  So give it one. This could
@@ -589,7 +588,6 @@ func (ctxt *Link) loadlib() {
 			}
 		}
 	}
-
 	// Add non-package symbols and references of externally defined symbols.
 	ctxt.loader.LoadSyms(ctxt.Arch)
 
@@ -1233,6 +1231,9 @@ func hostobjs(ctxt *Link) {
 }
 
 func hostlinksetup(ctxt *Link) {
+	if ctxt.IsWasm() {
+		return
+	}
 	if ctxt.LinkMode != LinkExternal {
 		return
 	}
@@ -1386,6 +1387,9 @@ func (ctxt *Link) archive() {
 }
 
 func (ctxt *Link) hostlink() {
+	if ctxt.HeadType == objabi.Hwasip1 {
+		return
+	}
 	if ctxt.LinkMode != LinkExternal || nerrors > 0 {
 		return
 	}
@@ -1581,7 +1585,7 @@ func (ctxt *Link) hostlink() {
 			argv = append(argv, "-shared")
 			if ctxt.HeadType == objabi.Hwindows {
 				argv = addASLRargs(argv, *flagAslr)
-			} else {
+			} else if ctxt.HeadType != objabi.Hwasip1 {
 				// Pass -z nodelete to mark the shared library as
 				// non-closeable: a dlclose will do nothing.
 				argv = append(argv, "-Wl,-z,nodelete")

@@ -1110,9 +1110,15 @@ func (r *reader) funcExt(name *ir.Name, method *types.Sym) {
 		xname := r.String()
 
 		if xmod != "" && xname != "" {
-			fn.WasmImport = &ir.WasmImport{
-				Module: xmod,
-				Name:   xname,
+			if xmod == "wasip1_export" {
+				fn.WasmExport = &ir.WasmExport{
+					Name: xname,
+				}
+			} else {
+				fn.WasmImport = &ir.WasmImport{
+					Module: xmod,
+					Name:   xname,
+				}
 			}
 		}
 	}

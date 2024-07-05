@@ -381,6 +381,9 @@ const (
 	// just used in the linker to order the inittask records appropriately.
 	R_INITORDER
 
+	// R_WASMIMPORT resolves to the index of the WebAssembly function import.
+	R_WASMEXPORT
+
 	// R_WEAK marks the relocation as a weak reference.
 	// A weak relocation does not make the symbol it refers to reachable,
 	// and is only honored by the linker if the symbol is in some other way
